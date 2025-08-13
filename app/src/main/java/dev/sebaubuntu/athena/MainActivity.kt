@@ -152,16 +152,24 @@ class MainActivity : AppCompatActivity() {
                             }
                         }
 
-                        sections.map {
+                        val results = sections.map {
                             async {
                                 updateData(
                                     it,
                                     runCatching {
                                         it.dataFlow(this@MainActivity)
-                                    }.getOrNull()?.take(1)?.single()
+                                    }.getOrNull()?.take(1)?.single() as? List<Subsection> ?: emptyList() // Return an empty list if processing fails
                                 )
                             }
-                        }.awaitAll()
+                        }
+
+                        try {
+                            withTimeout(3000) {
+                                results.awaitAll()
+                            }
+                        } catch (e: TimeoutCancellationException) {
+                            println("Operation timed out")
+                        }
 
                         val jsonData = Json.encodeToString(
                             listSerializer<Map<Section, List<Subsection>>>(),
